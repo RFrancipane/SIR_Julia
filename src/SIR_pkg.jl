@@ -9,6 +9,8 @@ using DifferentialEquations
 export simulate_model
 export plot_solution
 export time_cdf_gamma
+export plot_solution_SIRS
+
 include("SIR.jl")
 
 end
