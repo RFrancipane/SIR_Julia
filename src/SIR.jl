@@ -181,7 +181,65 @@ function error(sol::ODESolution, data::Vector{})
     return total
 end
 
+"""
+    simulate_model(S, I, Is, R, c, β, γ, ps, γs, α, tspan::Vector{})
 
+Simulate SIR model with force of infection
+
+# Arguments
+- `S`: Initial Susceptible population
+- `I`: Initial Infected population
+- `Is`: Initial Seriously Infected population
+- `R`: Initial Recovered population
+- `c`: Number of contacts 
+- `β`: Probability of infection
+- `γ`: Rate of recovery
+- `ps`: Probability of becoming seriously infected
+- `γs`: Rate of recovery from serious infection
+- `α`: Rate of becoming Susceptible
+- `tspan::Vector{}`: Timespan to model over
+"""
+function simulate_model(S, I, Is, R, c, β, γ, ps, γs, α, tspan::Vector{})
+    pop0 = [S, I, Is, R]
+    params = [c, β, γ, ps, γs, α]
+    model = ODEProblem(sirs_model, pop0, tspan, params)
+    sol = solve(model, saveat=0.2)
+    return sol
+end
+
+"""
+    sir_model_simple(dpop, pop, params, t)
+
+SIRS infection model
+
+# Arguments
+- `pop::Vector{}`: Initial Susceptible, Infected, Seriously Infected, Recovered populations
+- `params::Vector{}`: SIRS model parameters c, β, γ, ps, γs, α
+"""
+function sirs_model(dpop, pop, params::Vector{}, t)
+    S, I, Is, R = pop
+    c, β, γ, ps, γs, α = params
+    N = S + I + Is + R
+    λ = I * β * c / N + Is * β * c / N
+
+    dpop[1] = - λ * S                       + α * R
+    dpop[2] =   λ * S     - γ * I
+    dpop[3] =         ps  * γ * I - γs * Is
+    dpop[4] =      (1-ps) * γ * I + γs * Is - α * R
+end
+
+"""
+    plot_solution_SIRS(sol::ODESolution)
+
+Plots solution of SIRS model
+
+# Arguments
+- `sol::ODESolution`: Solution of SIRS model
+"""
+function plot_solution_SIRS(sol::ODESolution)
+    plot(sol, xlabel="Time", ylabel = "Population",label = ["S" "I" "Is" "R"], title = "Solution of SIR")
+    plot!(legend=:outerbottom, legendcolumns=4)
+end
 
 
 
