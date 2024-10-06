@@ -12,15 +12,35 @@ using Revise
 using Plots
 using DifferentialEquations
 
+"""
+    get_R0(c, β, γ)
+
+Gets value for R0 from SIR parameters
+"""
 function get_R0(c, β, γ)
     return c*β/γ
 end
 
+"""
+    get_pc(c, β, γ)
+
+Gets value for pc from SIR parameters
+"""
 function get_pc(c, β, γ)
     return 1 - 1/get_R0(c, β, γ)
 end
 
-function probability_to_rate(t, p)
+
+"""
+    probability_to_rate(t, p)
+
+Converts probability to recover after a given time into a rate of recovery
+
+# Arguments
+- `t::Float64`: Time of recovery
+- `p::Float64`: Probability of recovery before time t
+"""
+function probability_to_rate(t::Float64, p::Float64)
     #p = 1-e^-yt
     #1 - p = e^-yt
     #ln(1-p) = -yt
