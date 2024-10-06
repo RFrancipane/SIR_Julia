@@ -12,8 +12,15 @@ using Revise
 using Plots
 using DifferentialEquations
 
+function get_R0(c, β, γ)
+    return c*β/γ
+end
 
-function time_cdf_gamma(t, p)
+function get_pc(c, β, γ)
+    return 1 - 1/get_R0(c, β, γ)
+end
+
+function probability_to_rate(t, p)
     #p = 1-e^-yt
     #1 - p = e^-yt
     #ln(1-p) = -yt
@@ -21,8 +28,16 @@ function time_cdf_gamma(t, p)
     return γ
 end
 
+"""
+    sir_model_simple(dpop, pop, params, t)
 
-function sir_model_simple(dpop, pop, params::Vector{}, t)
+Basic SIR infection model
+
+# Arguments
+- `pop::Vector{}`: Initial Susceptible, Infected, Recovered populations
+- `params::Vector{}`: SIR model parameters λ, γ
+"""
+function sir_model_simple(dpop, pop::Vector{}, params::Vector{}, t)
     λ, γ = params
     S, I, R = pop
     N = S + I + R
@@ -31,6 +46,15 @@ function sir_model_simple(dpop, pop, params::Vector{}, t)
     dpop[3] = γ * I
 end
 
+"""
+    sir_model(dpop, pop, params, t)
+
+SIR infection model with true force of infection
+
+# Arguments
+- `pop::Vector{}`: Initial Susceptible, Infected, Recovered populations
+- `params::Vector{}`: SIR model parameters c, β, γ
+"""
 function sir_model(dpop, pop, params::Vector{}, t)
     S, I, R = pop
     c, β, γ = params
@@ -41,18 +65,19 @@ function sir_model(dpop, pop, params::Vector{}, t)
     dpop[3] = γ * I
 end
 
-function sirs_model(dpop, pop, params::Vector{}, t)
-    S, I, Is, R = pop
-    c, β, γ, ps, γs, α = params
-    N = S + I + Is + R
-    λ = I * β * c / N + Is * β * c / N
+"""
+    simulate_model(S, I, R, λ, γ, tspan::Vector{})
 
-    dpop[1] = - λ * S                       + α * R
-    dpop[2] =   λ * S     - γ * I
-    dpop[3] =         ps  * γ * I - γs * Is
-    dpop[4] =      (1-ps) * γ * I + γs * Is - α * R
-end
+Simulate simple SIR model
 
+# Arguments
+- `S`: Initial Susceptible population
+- `I`: Initial Infected population
+- `R`: Initial Recovered population
+- `λ`: Rate of infection
+- `γ`: Rate of recovery
+- `tspan::Vector{}`: Timespan to model over
+"""
 function simulate_model(S, I, R, λ, γ, tspan::Vector{})
     pop0 = [S, I, R]
     params = [λ, γ]
@@ -61,6 +86,20 @@ function simulate_model(S, I, R, λ, γ, tspan::Vector{})
     return sol
 end
 
+"""
+    simulate_model(S, I, R, λ, γ, tspan::Vector{})
+
+Simulate SIR model with force of infection
+
+# Arguments
+- `S`: Initial Susceptible population
+- `I`: Initial Infected population
+- `R`: Initial Recovered population
+- `c`: Number of contacts 
+- `β`: Probability of infection
+- `γ`: Rate of recovery
+- `tspan::Vector{}`: Timespan to model over
+"""
 function simulate_model(S, I, R, c, β, γ, tspan::Vector{})
     pop0 = [S, I, R]
     params = [c, β, γ]
@@ -69,25 +108,30 @@ function simulate_model(S, I, R, c, β, γ, tspan::Vector{})
     return sol
 end
 
-function simulate_model(S, I, Is, R, c, β, γ, ps, γs, α, tspan::Vector{})
-    pop0 = [S, I, Is, R]
-    params = [c, β, γ, ps, γs, α]
-    model = ODEProblem(sirs_model, pop0, tspan, params)
-    sol = solve(model, saveat=0.2)
-    return sol
-end
+"""
+    plot_solution(sol::ODESolution)
 
+Plots solution of SIR model
+
+# Arguments
+- `sol::ODESolution`: Solution of SIR model
+"""
 function plot_solution(sol::ODESolution)
     plot(sol, xlabel="Time", ylabel = "Population",label = ["S" "I" "R"], title = "Solution of SIR")
     plot!(legend=:outerbottom, legendcolumns=3)
 end
 
-function plot_solution_SIRS(sol::ODESolution)
-    plot(sol, xlabel="Time", ylabel = "Population",label = ["S" "I" "Is" "R"], title = "Solution of SIR")
-    plot!(legend=:outerbottom, legendcolumns=4)
-end
+"""
+    plot_solution(sol::ODESolution, data, tspan)
 
-function plot_solution(sol::ODESolution, data, tspan)
+Plots Infected from SIR model against infection data
+
+# Arguments
+- `sol::ODESolution`: Solution of SIR model
+- `data::Vector{}`: Vector of number of infections over time
+- `tspan::Vector{}`: Timespan over which to graph
+"""
+function plot_solution(sol::ODESolution, data::Vector{}, tspan::Vector{})
     plot(linewidth=4, title="Solution",xaxis="t",yaxis="pop",legend=false)
     plot!(sol.t,sol[2,:])
     plot!(data, seriestype=:scatter, label="data")
@@ -95,7 +139,17 @@ function plot_solution(sol::ODESolution, data, tspan)
     ylims!(0,1.2*maximum(data))
 end
 
-function error(sol, data)
+
+"""
+    error(sol::ODESolution, data::Vector{})
+
+Calculates least squares error of SIR solution compared to data
+
+# Arguments
+- `sol::ODESolution`: Solution of SIR model
+- `data::Vector{}`: Data over time
+"""
+function error(sol::ODESolution, data::Vector{})
     total = 0
     for x in range(1,length(data))
         for i in range(1,length(sol.t))
@@ -107,10 +161,6 @@ function error(sol, data)
     return total
 end
 
-#params = (c, β, γ)
-#params = [10, 0.03, 0.2]
-#pop0 = [5000, 1, 0]
-#tspan = [0, 30]
 
 
 

@@ -8,8 +8,10 @@ using DifferentialEquations
 
 export simulate_model
 export plot_solution
-export time_cdf_gamma
+export probability_to_rate
 export plot_solution_SIRS
+export get_R0
+export get_pc
 
 include("SIR.jl")
 
