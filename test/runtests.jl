@@ -28,21 +28,23 @@ using Test
         N = S + I + R
         c, β, γ = 10, 0.05, 0.1
         sol = simulate_model(S, I, R, c, β, γ, [0,200.0])
+        #test constant population
         for i in sol.u
             @test i[1] + i[2] + i[3] ≈ N
         end
         pc = get_pc(c, β, γ)
-        sim_pc = maximum(sol[2,:]+sol[3,:])/N
-        prev = 0
+        prev = [0,0,0]
         for i in sol.u
-            if i[3]/N > pc
-                @test i[2] < prev
+            #Test that infection grows before pc
+            if (prev[3]+prev[2]) > pc*N
+                @test i[2] <= prev[2]
             end
-            prev = i[2]
+            #test infection shrinks after pc
+            if (i[3]+i[2]) < pc*N
+                @test i[2] >= prev[2]
+            end
+            prev = i
         end
     end
 
-    @testset "Error calculation" begin
-        ##do later
-    end
 end
