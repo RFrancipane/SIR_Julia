@@ -40,7 +40,7 @@ Converts probability to recover after a given time into a rate of recovery
 - `t::Float64`: Time of recovery
 - `p::Float64`: Probability of recovery before time t
 """
-function probability_to_rate(t::Float64, p::Float64)
+function probability_to_rate(t, p)
     #p = 1-e^-yt
     #1 - p = e^-yt
     #ln(1-p) = -yt
