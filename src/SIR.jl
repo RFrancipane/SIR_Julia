@@ -22,6 +22,17 @@ function get_R0(c, β, γ)
 end
 
 """
+    get_R0(c, β, γ, ps, γs)
+
+Gets value for R0 from SIRS parameters
+"""
+function get_R0(c, β, γ, ps, γs)
+    R0 = c*β/γ #R0 for SIR
+        + ps*c*β/γs #Additional infections if seriously infected
+    return R0
+end
+
+"""
     get_pc(c, β, γ)
 
 Gets value for pc from SIR parameters
@@ -149,13 +160,15 @@ Plots Infected from SIR model against infection data
 # Arguments
 - `sol::ODESolution`: Solution of SIR model
 - `data::Vector{}`: Vector of number of infections over time
-- `tspan::Vector{}`: Timespan over which to graph
+- `data_time::Vector{}`: Times of datapoints
+- `data_time::Vector{}`: Times of datapoints
+
 """
-function plot_solution(sol::ODESolution, data::Vector{}, tspan::Vector{})
+function plot_solution(sol::ODESolution, index, data::Vector{}, data_time::Vector{})
     plot(linewidth=4, title="Solution",xaxis="t",yaxis="pop",legend=false)
-    plot!(sol.t,sol[2,:])
-    plot!(data, seriestype=:scatter, label="data")
-    xlims!(tspan[1],tspan[2])
+    plot!(sol.t,sol[index,:])
+    plot!(data_time, data, seriestype=:scatter, label="data")
+    #xlims!(tspan[1],tspan[2])
     ylims!(0,1.2*maximum(data))
 end
 
@@ -168,13 +181,14 @@ Calculates least squares error of SIR solution compared to data
 # Arguments
 - `sol::ODESolution`: Solution of SIR model
 - `data::Vector{}`: Data over time
+- `index`: SIR index to find error of
 """
-function error(sol::ODESolution, data::Vector{})
+function SIR_error(sol::ODESolution, data::Vector{}, data_time::Vector{}, index)
     total = 0
     for x in range(1,length(data))
         for i in range(1,length(sol.t))
-            if sol.t[i] ≈ x
-                total += (sol.u[i][2]-data[x])^2
+            if sol.t[i] ≈ data_time[x]
+                total += (sol.u[i][index]-data[x])^2
             end
         end
     end
@@ -184,7 +198,7 @@ end
 """
     simulate_model(S, I, Is, R, c, β, γ, ps, γs, α, tspan::Vector{})
 
-Simulate SIR model with force of infection
+Simulate SIRS model with force of infection
 
 # Arguments
 - `S`: Initial Susceptible population
@@ -207,8 +221,77 @@ function simulate_model(S, I, Is, R, c, β, γ, ps, γs, α, tspan::Vector{})
     return sol
 end
 
+
 """
-    sir_model_simple(dpop, pop, params, t)
+    simulate_model(S, I, Is, R, c, β, γ, ps, γs, α, tspan::Vector{})
+
+Simulate SIRS model with force of infection
+
+# Arguments
+- `S`: Initial Susceptible population
+- `I`: Initial Infected population
+- `Is`: Initial Seriously Infected population
+- `R`: Initial Recovered population
+- `c`: Number of contacts 
+- `β`: Probability of infection
+- `γ`: Rate of recovery
+- `ps`: Probability of becoming seriously infected
+- `γs`: Rate of recovery from serious infection
+- `α`: Rate of becoming Susceptible
+- `tspan::Vector{}`: Timespan to model over
+"""
+function simulate_model(S, I, Is, R, c, β, γ, ps, γs, α, tspan::Vector{})
+    pop0 = [S, I, Is, R]
+    params = [c, β, γ, ps, γs, α]
+    model = ODEProblem(sirs_model, pop0, tspan, params)
+    sol = solve(model, saveat=0.2)
+    return sol
+end
+
+
+
+
+
+"""
+    simulate_model(S, I, Is, R, c, β, γ, ps, γs, α, ϵ, Φ, intervention_time, tspan::Vector{})
+
+Simulate SIRS model with force of infection and invervention
+
+# Arguments
+- `S`: Initial Susceptible population
+- `I`: Initial Infected population
+- `Is`: Initial Seriously Infected population
+- `R`: Initial Recovered population
+- `c`: Number of contacts 
+- `β`: Probability of infection
+- `γ`: Rate of recovery
+- `ps`: Probability of becoming seriously infected
+- `γs`: Rate of recovery from serious infection
+- `α`: Rate of becoming Susceptible
+- `ϵ`: Intervention efficacy
+- `Φ`: Proportion following intervention
+- `intervention_time`: Time of intervention
+- `tspan::Vector{}`: Timespan to model over
+"""
+function simulate_model(S, I, Is, R, c, β, γ, ps, γs, α, ϵ, Φ, intervention_time, tspan::Vector{})
+    pop0 = [S, I, Is, R]
+    params = [c, β, γ, ps, γs, α, 0, 0]
+    model = ODEProblem(sirs_model_intervention, pop0, tspan, params)
+    #Create intervention callback for given time
+    function intervention_affect!(integrator)
+        integrator.p[7] = ϵ;
+        integrator.p[8] = Φ;
+    end
+    intervention_callback = PresetTimeCallback(intervention_time,intervention_affect!);
+    
+    sol = solve(model, saveat=0.2, callback = intervention_callback)
+    return sol
+end
+
+
+
+"""
+    sirs_model(dpop, pop, params, t)
 
 SIRS infection model
 
@@ -220,7 +303,28 @@ function sirs_model(dpop, pop, params::Vector{}, t)
     S, I, Is, R = pop
     c, β, γ, ps, γs, α = params
     N = S + I + Is + R
-    λ = I * β * c / N + Is * β * c / N
+    λ = I * β * c / N
+
+    dpop[1] = - λ * S                       + α * R
+    dpop[2] =   λ * S     - γ * I
+    dpop[3] =         ps  * γ * I - γs * Is
+    dpop[4] =      (1-ps) * γ * I + γs * Is - α * R
+end
+
+"""
+    sirs_model_intervention(dpop, pop, params, t)
+
+SIRS infection model with intervention
+
+# Arguments
+- `pop::Vector{}`: Initial Susceptible, Infected, Seriously Infected, Recovered populations
+- `params::Vector{}`: SIRS model parameters c, β, γ, ps, γs, α
+"""
+function sirs_model_intervention(dpop, pop, params::Vector{}, t)
+    S, I, Is, R = pop
+    c, β, γ, ps, γs, α, ϵ, Φ = params
+    N = S + I + Is + R
+    λ = (1 - ϵ*Φ)*I * β * c / N
 
     dpop[1] = - λ * S                       + α * R
     dpop[2] =   λ * S     - γ * I
