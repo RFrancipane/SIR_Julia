@@ -12,6 +12,7 @@ export probability_to_rate
 export plot_solution_SIRS
 export get_R0
 export get_pc
+export SIR_error
 
 include("SIR.jl")
 
