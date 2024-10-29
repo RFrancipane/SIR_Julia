@@ -46,4 +46,9 @@ using Test
             prev = i
         end
     end
+
+    sol = simulate_model(5,1,0,0,0,[0,200.])
+    error_test_data = [0,1,2,3]
+    error_test_data_time = [1,2,3,4]
+    @test SIR_error(sol, error_test_data, error_test_data_time, 2) ≈ 6
 end

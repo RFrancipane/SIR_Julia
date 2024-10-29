@@ -13,6 +13,9 @@ export plot_solution_SIRS
 export get_R0
 export get_pc
 export SIR_error
+export plot_error
+export plot_range
+export get_beta_range
 
 include("SIR.jl")
 

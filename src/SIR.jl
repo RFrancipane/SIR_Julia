@@ -221,37 +221,6 @@ function simulate_model(S, I, Is, R, c, β, γ, ps, γs, α, tspan::Vector{})
     return sol
 end
 
-
-"""
-    simulate_model(S, I, Is, R, c, β, γ, ps, γs, α, tspan::Vector{})
-
-Simulate SIRS model with force of infection
-
-# Arguments
-- `S`: Initial Susceptible population
-- `I`: Initial Infected population
-- `Is`: Initial Seriously Infected population
-- `R`: Initial Recovered population
-- `c`: Number of contacts 
-- `β`: Probability of infection
-- `γ`: Rate of recovery
-- `ps`: Probability of becoming seriously infected
-- `γs`: Rate of recovery from serious infection
-- `α`: Rate of becoming Susceptible
-- `tspan::Vector{}`: Timespan to model over
-"""
-function simulate_model(S, I, Is, R, c, β, γ, ps, γs, α, tspan::Vector{})
-    pop0 = [S, I, Is, R]
-    params = [c, β, γ, ps, γs, α]
-    model = ODEProblem(sirs_model, pop0, tspan, params)
-    sol = solve(model, saveat=0.2)
-    return sol
-end
-
-
-
-
-
 """
     simulate_model(S, I, Is, R, c, β, γ, ps, γs, α, ϵ, Φ, intervention_time, tspan::Vector{})
 
@@ -345,5 +314,82 @@ function plot_solution_SIRS(sol::ODESolution)
     plot!(legend=:outerbottom, legendcolumns=4)
 end
 
+function general_sim_model(args::Vector{}, tspan::Vector{}) 
+    len = size(args, 1)
+    if (size == 5) 
+        return simulate_model(args[1], args[2], args[3], args[4], args[5], tspan)
+    end
+    if (size == 6) 
+        return simulate_model(args[1], args[2], args[3], args[4], args[5], args[6], tspan)
+    end
+    if (size == 10)
+        return simulate_model(args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9], args[10], tspan)
+    end
+
+    if (size == 13)
+        return simulate_model(args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9], args[10], args[11], args[12], args[13], tspan)
+    end
+end
 
 
+function get_error_spread(S, I, Is, R, c, γ, ps, γs, α, tspan, data, data_time, data_s, data_time_s, β_vals)
+    error_array = []
+    for β in β_vals
+        solution = simulate_model(S, I, Is, R, c, β, γ, ps, γs, α, tspan)
+        total_error = SIR_error(solution, data, data_time, 2) + SIR_error(solution, data_s, data_time_s, 3)
+        push!(error_array, total_error)
+    end
+    return error_array
+end
+
+function plot_error(S, I, Is, R, c, γ, ps, γs, α, tspan, data, data_time, data_s, data_time_s, β_range)
+    step = 0.0001
+    β_vals = β_range[1]:step:β_range[2]
+    error_array = get_error_spread(S, I, Is, R, c, γ, ps, γs, α, tspan, data, data_time, data_s, data_time_s, β_vals)
+    plot(β_vals, error_array, xlabel="β", ylabel = "Error", title = "Error vs β")
+end
+
+function get_beta_range(S, I, Is, R, c, γ, ps, γs, α, tspan, data, data_time, data_s, data_time_s, β_range, error_diff)
+    step = 0.0001
+    β_vals = β_range[1]:step:β_range[2]
+    error_array = get_error_spread(S, I, Is, R, c, γ, ps, γs, α, tspan, data, data_time, data_s, data_time_s, β_vals)
+    min_error = minimum(error_array)
+    β_spread = [0,β_vals[argmin(error_array)],0]
+
+
+    for i in range(1, length(error_array))
+        if (error_array[i] <= min_error*(1+error_diff) && β_spread[1] == 0)
+            β_spread[1] = β_vals[i]
+        end
+        if (error_array[i] >= min_error*(1+error_diff) && β_spread[1] != 0)
+            β_spread[3] = β_vals[i]
+        end
+    end
+    
+    return β_spread
+end
+
+
+function plot_range(S, I, Is, R, c, γ, ps, γs, α, tspan, data, data_time, β_vals, index) 
+    sol1 = simulate_model(S, I, Is, R, c, β_vals[1], γ, ps, γs, α, tspan)
+    sol2 = simulate_model(S, I, Is, R, c, β_vals[2], γ, ps, γs, α, tspan)
+    sol3 = simulate_model(S, I, Is, R, c, β_vals[3], γ, ps, γs, α, tspan)
+    plot(linewidth=4, title="Solution",xaxis="t",yaxis="population",legend=false)
+    plot!(sol1.t,sol1[index,:])
+    plot!(sol2.t,sol2[index,:])
+    plot!(sol3.t,sol3[index,:])
+    plot!(data_time, data, seriestype=:scatter, label="data")
+    ylims!(0,1.5*maximum(data))
+    xlims!(0,1.5*maximum(data_time))
+end
+
+
+function plot_range(S, I, Is, R, c, γ, ps, γs, α, tspan, β_vals, index) 
+    sol1 = simulate_model(S, I, Is, R, c, β_vals[1], γ, ps, γs, α, tspan)
+    sol2 = simulate_model(S, I, Is, R, c, β_vals[2], γ, ps, γs, α, tspan)
+    sol3 = simulate_model(S, I, Is, R, c, β_vals[3], γ, ps, γs, α, tspan)
+    plot(linewidth=4, title="Solution",xaxis="t",yaxis="population",legend=false)
+    plot!(sol1.t,sol1[index,:])
+    plot!(sol2.t,sol2[index,:])
+    plot!(sol3.t,sol3[index,:])
+end
