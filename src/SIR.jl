@@ -192,6 +192,7 @@ function SIR_error(sol::ODESolution, data::Vector{}, data_time::Vector{}, index)
             end
         end
     end
+    total /= length(data)
     return total
 end
 
@@ -314,23 +315,44 @@ function plot_solution_SIRS(sol::ODESolution)
     plot!(legend=:outerbottom, legendcolumns=4)
 end
 
-function general_sim_model(args::Vector{}, tspan::Vector{}) 
+function simulate_model(args::Vector{}, tspan::Vector{}) 
     len = size(args, 1)
-    if (size == 5) 
+    if (len == 5) 
         return simulate_model(args[1], args[2], args[3], args[4], args[5], tspan)
     end
-    if (size == 6) 
+    if (len == 6) 
         return simulate_model(args[1], args[2], args[3], args[4], args[5], args[6], tspan)
     end
-    if (size == 10)
+    if (len == 10)
         return simulate_model(args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9], args[10], tspan)
     end
 
-    if (size == 13)
+    if (len == 13)
         return simulate_model(args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9], args[10], args[11], args[12], args[13], tspan)
     end
 end
 
+function get_error_spread(params, tspan, data, data_time, index, vals)
+    error_array = []
+    for param_val in vals
+        params[index] = param_val
+        solution = simulate_model(params, tspan)
+        total_error = SIR_error(solution, data, data_time, 2)
+        push!(error_array, total_error)
+    end
+    return error_array
+end
+
+function get_error_spread(params, tspan, data, data_time, data_s, data_time_s, index, vals)
+    error_array = []
+    for param_val in vals
+        params[index] = param_val
+        solution = simulate_model(params, tspan)
+        total_error = SIR_error(solution, data, data_time, 2) + SIR_error(solution, data_s, data_time_s, 3)
+        push!(error_array, total_error)
+    end
+    return error_array
+end
 
 function get_error_spread(S, I, Is, R, c, γ, ps, γs, α, tspan, data, data_time, data_s, data_time_s, β_vals)
     error_array = []
@@ -340,6 +362,13 @@ function get_error_spread(S, I, Is, R, c, γ, ps, γs, α, tspan, data, data_tim
         push!(error_array, total_error)
     end
     return error_array
+end
+
+function plot_error(params, tspan, data, data_time, index, param_range)
+    step = 0.0001
+    vals = param_range[1]:step:param_range[2]
+    error_array = get_error_spread(params, tspan, data, data_time, index, vals)
+    plot(vals, error_array, xlabel="Param", ylabel = "Error", title = "Error vs Param")
 end
 
 function plot_error(S, I, Is, R, c, γ, ps, γs, α, tspan, data, data_time, data_s, data_time_s, β_range)
@@ -363,10 +392,56 @@ function get_beta_range(S, I, Is, R, c, γ, ps, γs, α, tspan, data, data_time,
         end
         if (error_array[i] >= min_error*(1+error_diff) && β_spread[1] != 0)
             β_spread[3] = β_vals[i]
+            #Break early once spread found
+            return β_spread
         end
     end
     
     return β_spread
+end
+
+function get_parameter_range(params, tspan, data, data_time, data_s, data_time_s, param_range, index, error_diff)
+    step = 0.0001
+    vals = param_range[1]:step:param_range[2]
+    error_array = get_error_spread(params, tspan, data, data_time, data_s, data_time_s, index, vals)
+    min_error = minimum(error_array)
+    param_spread = [0,vals[argmin(error_array)],0]
+
+
+    for i in range(1, length(error_array))
+        if (error_array[i] <= min_error*(1+error_diff) && param_spread[1] == 0)
+            param_spread[1] = vals[i]
+        end
+        if (error_array[i] >= min_error*(1+error_diff) && param_spread[1] != 0)
+            param_spread[3] = vals[i]
+            #Break early once spread found
+            return param_spread
+        end
+    end
+    
+    return param_spread
+end
+
+function get_parameter_range(params, tspan, data, data_time, param_range, index, error_diff)
+    step = 0.0001
+    vals = param_range[1]:step:param_range[2]
+    error_array = get_error_spread(params, tspan, data, data_time, index, vals)
+    min_error = minimum(error_array)
+    param_spread = [0,vals[argmin(error_array)],0]
+
+
+    for i in range(1, length(error_array))
+        if (error_array[i] <= min_error*(1+error_diff) && param_spread[1] == 0)
+            param_spread[1] = vals[i]
+        end
+        if (error_array[i] >= min_error*(1+error_diff) && param_spread[1] != 0)
+            param_spread[3] = vals[i]
+            #Break early once spread found
+            return param_spread
+        end
+    end
+    
+    return param_spread
 end
 
 
@@ -379,8 +454,6 @@ function plot_range(S, I, Is, R, c, γ, ps, γs, α, tspan, data, data_time, β_
     plot!(sol2.t,sol2[index,:])
     plot!(sol3.t,sol3[index,:])
     plot!(data_time, data, seriestype=:scatter, label="data")
-    ylims!(0,1.5*maximum(data))
-    xlims!(0,1.5*maximum(data_time))
 end
 
 
@@ -392,4 +465,20 @@ function plot_range(S, I, Is, R, c, γ, ps, γs, α, tspan, β_vals, index)
     plot!(sol1.t,sol1[index,:])
     plot!(sol2.t,sol2[index,:])
     plot!(sol3.t,sol3[index,:])
+end
+
+function get_parameter_array(S, I, R, λ, γ) 
+    return [S, I, R, λ, γ]
+end
+
+function get_parameter_array(S, I, R, c, β, γ) 
+    return [S, I, R, c, β, γ]
+end
+
+function get_parameter_array(S, I, Is, R, c, β, γ, ps, γs, α) 
+    return [S, I, Is, R, c, β, γ, ps, γs, α]
+end
+
+function get_parameter_array(S, I, Is, R, c, β, γ, ps, γs, α, ϵ, Φ, intervention_time) 
+    return [S, I, Is, R, c, β, γ, ps, γs, α, ϵ, Φ, intervention_time]
 end

@@ -16,6 +16,8 @@ export SIR_error
 export plot_error
 export plot_range
 export get_beta_range
+export get_parameter_array
+export get_parameter_range
 
 include("SIR.jl")
 
