@@ -21,16 +21,6 @@ function get_R0(c, β, γ)
     return c*β/γ
 end
 
-"""
-    get_R0(c, β, γ, ps, γs)
-
-Gets value for R0 from SIRS parameters
-"""
-function get_R0(c, β, γ, ps, γs)
-    R0 = c*β/γ #R0 for SIR
-        + ps*c*β/γs #Additional infections if seriously infected
-    return R0
-end
 
 """
     get_pc(c, β, γ)
