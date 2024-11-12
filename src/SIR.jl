@@ -186,7 +186,7 @@ end
 """
     error(sol::ODESolution, data::Vector{})
 
-Calculates least squares error of SIR solution compared to data
+Calculates Mean squared error of SIR solution compared to data
 
 # Arguments
 - `sol::ODESolution`: Solution of SIR model
@@ -202,7 +202,7 @@ function SIR_error(sol::ODESolution, data::Vector{}, data_time::Vector{}, index)
             end
         end
     end
-    total /= length(data)
+    total /= (length(data)-2)
     return total
 end
 
@@ -379,29 +379,31 @@ function plot_error(params, tspan, data, data_time, data_index, param_index, par
     step = 0.0001
     vals = param_range[1]:step:param_range[2]
     error_array = get_error_spread(params, tspan, data, data_time, data_index, param_index, vals)
-    plot(vals, error_array, xlabel="Param", ylabel = "Error", title = "Error vs Param")
+    plot(vals, error_array, xlabel="Param", ylabel = "Mean Squared Error", title = "Error vs Param", legend=false)
 end
 
 function plot_error(S, I, Is, R, c, γ, ps, γs, α, tspan, data, data_time, data_s, data_time_s, β_range)
     step = 0.0001
     β_vals = β_range[1]:step:β_range[2]
     error_array = get_error_spread(S, I, Is, R, c, γ, ps, γs, α, tspan, data, data_time, data_s, data_time_s, β_vals)
-    plot(β_vals, error_array, xlabel="β", ylabel = "Error", title = "Error vs β")
+    plot(β_vals, error_array, xlabel="β", ylabel = "Mean Squared Error", title = "Error vs β", legend=false)
 end
 
-function get_beta_range(S, I, Is, R, c, γ, ps, γs, α, tspan, data, data_time, data_s, data_time_s, β_range, error_diff)
+function get_beta_range(S, I, Is, R, c, γ, ps, γs, α, tspan, data, data_time, data_s, data_time_s, β_range, std)
     step = 0.0001
     β_vals = β_range[1]:step:β_range[2]
     error_array = get_error_spread(S, I, Is, R, c, γ, ps, γs, α, tspan, data, data_time, data_s, data_time_s, β_vals)
     min_error = minimum(error_array)
+    #Approx Standard deviation of MSE is sqrt(MSE)
+    error_diff = std*sqrt(min_error)
     β_spread = [0,β_vals[argmin(error_array)],0]
 
 
     for i in range(1, length(error_array))
-        if (error_array[i] <= min_error*(1+error_diff) && β_spread[1] == 0)
+        if (error_array[i] <= min_error+error_diff && β_spread[1] == 0)
             β_spread[1] = β_vals[i]
         end
-        if (error_array[i] >= min_error*(1+error_diff) && β_spread[1] != 0)
+        if (error_array[i] >= min_error+error_diff && β_spread[1] != 0)
             β_spread[3] = β_vals[i]
             #Break early once spread found
             return β_spread
@@ -411,19 +413,21 @@ function get_beta_range(S, I, Is, R, c, γ, ps, γs, α, tspan, data, data_time,
     return β_spread
 end
 
-function get_parameter_range(params, tspan, data, data_time, data_s, data_time_s, param_range, index, error_diff)
+function get_parameter_range(params, tspan, data, data_time, data_s, data_time_s, param_range, index, std)
     step = 0.0001
     vals = param_range[1]:step:param_range[2]
     error_array = get_error_spread(params, tspan, data, data_time, data_s, data_time_s, index, vals)
     min_error = minimum(error_array)
+    #Approx Standard deviation of MSE is sqrt(MSE)
+    error_diff = std*sqrt(min_error)
     param_spread = [0,vals[argmin(error_array)],0]
 
 
     for i in range(1, length(error_array))
-        if (error_array[i] <= min_error*(1+error_diff) && param_spread[1] == 0)
+        if (error_array[i] <= min_error+error_diff && param_spread[1] == 0)
             param_spread[1] = vals[i]
         end
-        if (error_array[i] >= min_error*(1+error_diff) && param_spread[1] != 0)
+        if (error_array[i] >= min_error+error_diff && param_spread[1] != 0)
             param_spread[3] = vals[i]
             #Break early once spread found
             return param_spread
@@ -441,19 +445,21 @@ function optimise_parameter(params, tspan, data, data_time, data_s, data_time_s,
     return vals[argmin(error_array)]
 end
 
-function get_parameter_range(params, tspan, data, data_time, param_range, param_index, index, error_diff)
+function get_parameter_range(params, tspan, data, data_time, param_range, param_index, index, std)
     step = 0.0001
     vals = param_range[1]:step:param_range[2]
     error_array = get_error_spread(params, tspan, data, data_time, param_index, index, vals)
     min_error = minimum(error_array)
+    #Approx Standard deviation of MSE is sqrt(MSE)
+    error_diff = std*sqrt(min_error)
     param_spread = [0,vals[argmin(error_array)],0]
 
 
     for i in range(1, length(error_array))
-        if (error_array[i] <= min_error*(1+error_diff) && param_spread[1] == 0)
+        if (error_array[i] <= min_error+error_diff && param_spread[1] == 0)
             param_spread[1] = vals[i]
         end
-        if (error_array[i] >= min_error*(1+error_diff) && param_spread[1] != 0)
+        if (error_array[i] >= min_error+error_diff && param_spread[1] != 0)
             param_spread[3] = vals[i]
             #Break early once spread found
             return param_spread
@@ -479,7 +485,7 @@ function plot_range(S, I, Is, R, c, γ, ps, γs, α, tspan, data, data_time, β_
     sol1 = simulate_model(S, I, Is, R, c, β_vals[1], γ, ps, γs, α, tspan)
     sol2 = simulate_model(S, I, Is, R, c, β_vals[2], γ, ps, γs, α, tspan)
     sol3 = simulate_model(S, I, Is, R, c, β_vals[3], γ, ps, γs, α, tspan)
-    plot(linewidth=4, title=labels[1],xaxis=labels[2],yaxis=labels[3],legend=true)
+    plot(linewidth=7, title=labels[1],xaxis=labels[2],yaxis=labels[3],legend=true, palette = :Dark2_8)
     plot!(sol1.t,sol1[index,:], label = "Best case prediction")
     plot!(sol2.t,sol2[index,:], label = "Mean prediction")
     plot!(sol3.t,sol3[index,:], label = "Worse case prediction")
@@ -490,7 +496,7 @@ function plot_range(S, I, Is, R, c, γ, ps, γs, α, tspan, β_vals, index)
     sol1 = simulate_model(S, I, Is, R, c, β_vals[1], γ, ps, γs, α, tspan)
     sol2 = simulate_model(S, I, Is, R, c, β_vals[2], γ, ps, γs, α, tspan)
     sol3 = simulate_model(S, I, Is, R, c, β_vals[3], γ, ps, γs, α, tspan)
-    plot(linewidth=4, title="Solution",xaxis="t",yaxis="population",legend=false)
+    plot(linewidth=4, title="Solution",xaxis="t",yaxis="population",legend=false, palette = :davos10)
     plot!(sol1.t,sol1[index,:])
     plot!(sol2.t,sol2[index,:])
     plot!(sol3.t,sol3[index,:])
