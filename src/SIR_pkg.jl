@@ -18,6 +18,7 @@ export plot_range
 export get_beta_range
 export get_parameter_array
 export get_parameter_range
+export optimise_parameters
 
 include("SIR.jl")
 

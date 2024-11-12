@@ -25,7 +25,6 @@ using Test
 
     @testset "Force of infection model" begin
         S, I, R = 4999, 1, 0
-        N = S + I + R
         c, β, γ = 10, 0.05, 0.1
         sol = simulate_model(S, I, R, c, β, γ, [0,200.0])
         #test constant population
@@ -51,4 +50,14 @@ using Test
     error_test_data = [0,1,2,3]
     error_test_data_time = [1,2,3,4]
     @test SIR_error(sol, error_test_data, error_test_data_time, 2) ≈ 6/4
+
+    @testset "Serious Infection" begin
+        S, I, Is, R = 4999, 1, 0, 0
+        c, β, γ = 10, 0.05, 0.1
+        ps, γs = 0.2, 0.1
+
+    end
+    @testset "Intervention model" begin
+        
+    end
 end

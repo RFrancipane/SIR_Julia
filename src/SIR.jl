@@ -172,6 +172,26 @@ function plot_solution(sol::ODESolution, index, data::Vector{}, data_time::Vecto
     ylims!(0,1.2*maximum(data))
 end
 
+"""
+    plot_solution(sol::ODESolution, data, tspan, labels)
+
+Plots Infected from SIR model against infection data
+
+# Arguments
+- `sol::ODESolution`: Solution of SIR model
+- `data::Vector{}`: Vector of number of infections over time
+- `data_time::Vector{}`: Times of datapoints
+- `labels::Vector{}`: Labels For graph, ordered by Title, X axis, Y axis, Model label, Data label
+
+"""
+function plot_solution(sol::ODESolution, index, data::Vector{}, data_time::Vector{}, labels::Vector{})
+    plot(linewidth=4, title=labels[1],xaxis=labels[2],yaxis=labels[3],legend=true)
+    plot!(sol.t,sol[index,:], label = labels[4])
+    plot!(data_time, data, seriestype=:scatter, label=labels[5])
+    xlims!(0,2*maximum(data_time))
+    ylims!(0,2*maximum(data))
+end
+
 
 """
     error(sol::ODESolution, data::Vector{})
@@ -311,7 +331,7 @@ Plots solution of SIRS model
 - `sol::ODESolution`: Solution of SIRS model
 """
 function plot_solution_SIRS(sol::ODESolution)
-    plot(sol, xlabel="Time", ylabel = "Population",label = ["S" "I" "Is" "R"], title = "Solution of SIR")
+    plot(sol, xlabel="Time", ylabel = "Population",label = ["S" "I" "Is" "R"], title = "SIRS Model")
     plot!(legend=:outerbottom, legendcolumns=4)
 end
 
@@ -330,14 +350,15 @@ function simulate_model(args::Vector{}, tspan::Vector{})
     if (len == 13)
         return simulate_model(args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9], args[10], args[11], args[12], args[13], tspan)
     end
+    println("Wrong params length")
 end
 
-function get_error_spread(params, tspan, data, data_time, index, vals)
+function get_error_spread(params, tspan, data, data_time, data_index, index, vals)
     error_array = []
     for param_val in vals
         params[index] = param_val
         solution = simulate_model(params, tspan)
-        total_error = SIR_error(solution, data, data_time, 2)
+        total_error = SIR_error(solution, data, data_time, data_index)
         push!(error_array, total_error)
     end
     return error_array
@@ -364,10 +385,10 @@ function get_error_spread(S, I, Is, R, c, γ, ps, γs, α, tspan, data, data_tim
     return error_array
 end
 
-function plot_error(params, tspan, data, data_time, index, param_range)
+function plot_error(params, tspan, data, data_time, data_index, param_index, param_range)
     step = 0.0001
     vals = param_range[1]:step:param_range[2]
-    error_array = get_error_spread(params, tspan, data, data_time, index, vals)
+    error_array = get_error_spread(params, tspan, data, data_time, data_index, param_index, vals)
     plot(vals, error_array, xlabel="Param", ylabel = "Error", title = "Error vs Param")
 end
 
@@ -422,10 +443,18 @@ function get_parameter_range(params, tspan, data, data_time, data_s, data_time_s
     return param_spread
 end
 
-function get_parameter_range(params, tspan, data, data_time, param_range, index, error_diff)
+function optimise_parameter(params, tspan, data, data_time, data_s, data_time_s, param_range, index)
     step = 0.0001
     vals = param_range[1]:step:param_range[2]
-    error_array = get_error_spread(params, tspan, data, data_time, index, vals)
+    error_array = get_error_spread(params, tspan, data, data_time, data_s, data_time_s, index, vals)
+    min_error = minimum(error_array)
+    return vals[argmin(error_array)]
+end
+
+function get_parameter_range(params, tspan, data, data_time, param_range, param_index, index, error_diff)
+    step = 0.0001
+    vals = param_range[1]:step:param_range[2]
+    error_array = get_error_spread(params, tspan, data, data_time, param_index, index, vals)
     min_error = minimum(error_array)
     param_spread = [0,vals[argmin(error_array)],0]
 
@@ -449,13 +478,23 @@ function plot_range(S, I, Is, R, c, γ, ps, γs, α, tspan, data, data_time, β_
     sol1 = simulate_model(S, I, Is, R, c, β_vals[1], γ, ps, γs, α, tspan)
     sol2 = simulate_model(S, I, Is, R, c, β_vals[2], γ, ps, γs, α, tspan)
     sol3 = simulate_model(S, I, Is, R, c, β_vals[3], γ, ps, γs, α, tspan)
-    plot(linewidth=4, title="Solution",xaxis="t",yaxis="population",legend=false)
-    plot!(sol1.t,sol1[index,:])
-    plot!(sol2.t,sol2[index,:])
-    plot!(sol3.t,sol3[index,:])
-    plot!(data_time, data, seriestype=:scatter, label="data")
+    plot(linewidth=4, title="SIRS Solution",xaxis="Time",yaxis="Population",legend=true)
+    plot!(sol1.t,sol1[index,:], label = "Best case prediction")
+    plot!(sol2.t,sol2[index,:], label = "Mean prediction")
+    plot!(sol3.t,sol3[index,:], label = "Worse case prediction")
+    plot!(data_time, data, seriestype=:scatter, label="Data")
 end
 
+function plot_range(S, I, Is, R, c, γ, ps, γs, α, tspan, data, data_time, β_vals, index, labels) 
+    sol1 = simulate_model(S, I, Is, R, c, β_vals[1], γ, ps, γs, α, tspan)
+    sol2 = simulate_model(S, I, Is, R, c, β_vals[2], γ, ps, γs, α, tspan)
+    sol3 = simulate_model(S, I, Is, R, c, β_vals[3], γ, ps, γs, α, tspan)
+    plot(linewidth=4, title=labels[1],xaxis=labels[2],yaxis=labels[3],legend=true)
+    plot!(sol1.t,sol1[index,:], label = "Best case prediction")
+    plot!(sol2.t,sol2[index,:], label = "Mean prediction")
+    plot!(sol3.t,sol3[index,:], label = "Worse case prediction")
+    plot!(data_time, data, seriestype=:scatter, label=labels[4])
+end
 
 function plot_range(S, I, Is, R, c, γ, ps, γs, α, tspan, β_vals, index) 
     sol1 = simulate_model(S, I, Is, R, c, β_vals[1], γ, ps, γs, α, tspan)
@@ -481,4 +520,15 @@ end
 
 function get_parameter_array(S, I, Is, R, c, β, γ, ps, γs, α, ϵ, Φ, intervention_time) 
     return [S, I, Is, R, c, β, γ, ps, γs, α, ϵ, Φ, intervention_time]
+end
+
+function optimise_parameters(params, tspan, data, data_time, data_s, data_time_s, variable_params, num_iterations)
+    param_range = [0,1]
+    for i in range(1, num_iterations)
+        for i in variable_params
+            optimised_param = optimise_parameter(params, tspan, data, data_time, data_s, data_time_s, param_range, i)
+            params[i] = optimised_param
+        end
+    end
+    return params
 end
