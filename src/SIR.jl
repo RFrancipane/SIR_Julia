@@ -18,7 +18,7 @@ using DifferentialEquations
 Gets value for R0 from SIR parameters
 """
 function get_R0(c, β, γ)
-    return c*β/γ
+    return c*β/γ 
 end
 
 
@@ -325,6 +325,15 @@ function plot_solution_SIRS(sol::ODESolution)
     plot!(legend=:outerbottom, legendcolumns=4)
 end
 
+"""
+    simulate_model(args::Vector{}, tspan::Vector{}) 
+
+Simulate SIRS model using arguments as a vector
+
+# Arguments
+- `args::Vector{}`: List of valid arguments for any SIR/SIRS model as vector
+- `tspan::Vector{}`: Timespan to simulate
+"""
 function simulate_model(args::Vector{}, tspan::Vector{}) 
     len = size(args, 1)
     if (len == 5) 
@@ -343,7 +352,21 @@ function simulate_model(args::Vector{}, tspan::Vector{})
     println("Wrong params length")
 end
 
-function get_error_spread(params, tspan, data, data_time, data_index, index, vals)
+"""
+    get_error_spread(params::Vector{}, tspan::Vector{}, data::Vector{}, data_time::Vector{}, data_index, index, vals)
+
+Calculate mean squared error of an SIR/SIRS model at any number of values for one parameter
+
+# Arguments
+- `params::Vector{}`: List of valid parameters for any SIR/SIRS model as vector
+- `tspan::Vector{}`: Timespan to simulate
+- `data::Vector{}`: Data to model against
+- `data_time::Vector{}`: Time of datapoints
+- `data_index`: Index of SIRS model to test against data
+- `index`: Parameter index to change
+- `vals::Vector{}`: Values of parameter to test
+"""
+function get_error_spread(params::Vector{}, tspan::Vector{}, data::Vector{}, data_time::Vector{}, data_index, index, vals::Vector{})
     error_array = []
     for param_val in vals
         params[index] = param_val
@@ -354,7 +377,25 @@ function get_error_spread(params, tspan, data, data_time, data_index, index, val
     return error_array
 end
 
-function get_error_spread(params, tspan, data, data_time, data_s, data_time_s, index, vals)
+
+"""
+    get_error_spread(params::Vector{}, tspan::Vector{}, data::Vector{}, data_time::Vector{}, data_s::Vector{}, 
+        data_time_s::Vector{}, index, vals::Vector{})
+
+Calculate mean squared error of an SIR/SIRS model at any number of values for one parameter
+
+# Arguments
+- `params::Vector{}`: List of valid parameters for any SIR/SIRS model as vector
+- `tspan::Vector{}`: Timespan to simulate
+- `data::Vector{}`: Data to model against (Infected)
+- `data_time::Vector{}`: Time of datapoints (Infected)
+- `data_s::Vector{}`: Data to model against (Seriously Infected)
+- `data_time_s::Vector{}`: Time of datapoints (Seriously Infected)
+- `index`: Parameter index to change
+- `vals::Vector{}`: Values of parameter to test
+"""
+function get_error_spread(params::Vector{}, tspan::Vector{}, data::Vector{}, data_time::Vector{}, data_s::Vector{}, data_time_s::Vector{}, index, vals::Vector{})
+    
     error_array = []
     for param_val in vals
         params[index] = param_val
@@ -364,6 +405,21 @@ function get_error_spread(params, tspan, data, data_time, data_s, data_time_s, i
     end
     return error_array
 end
+
+"""
+    get_error_spread(S, I, Is, R, c, γ, ps, γs, α, tspan, data, data_time, data_s, data_time_s, β_vals)
+
+Calculate mean squared error of an SIRS model for beta values
+
+# Arguments
+- `S, I, Is, R, c, γ, ps, γs, α`: Parameters for SIRS model with serious infection
+- `tspan::Vector{}`: Timespan to simulate
+- `data::Vector{}`: Data to model against (Infected)
+- `data_time::Vector{}`: Time of datapoints (Infected)
+- `data_s::Vector{}`: Data to model against (Seriously Infected)
+- `data_time_s::Vector{}`: Time of datapoints (Seriously Infected)
+- `β_vals`: Beta values to get error for
+"""
 
 function get_error_spread(S, I, Is, R, c, γ, ps, γs, α, tspan, data, data_time, data_s, data_time_s, β_vals)
     error_array = []
@@ -375,6 +431,21 @@ function get_error_spread(S, I, Is, R, c, γ, ps, γs, α, tspan, data, data_tim
     return error_array
 end
 
+
+"""
+    plot_error(params, tspan, data, data_time, data_index, param_index, param_range, labels)
+
+Plot error for any parameter of an SIR/SIRS model
+
+# Arguments
+- `params`: Vector of valid parameters for any SIR/SIRS model as vector
+- `tspan`: Timespan to simulate
+- `data`: Data to model against
+- `data_time`: Time of datapoints
+- `data_index`: Index of SIR model to test against data
+- `param_index`: Parameter index to change
+- `labels`: Labels for graph in form [xlabel, title]
+"""
 function plot_error(params, tspan, data, data_time, data_index, param_index, param_range, labels)
     step = 0.0001
     vals = param_range[1]:step:param_range[2]
@@ -382,6 +453,20 @@ function plot_error(params, tspan, data, data_time, data_index, param_index, par
     plot(vals, error_array, xlabel=labels[1], ylabel = "Mean Squared Error", title = labels[2], legend=false)
 end
 
+"""
+    plot_error(params, tspan, data, data_time, data_index, param_index, param_range, labels)
+
+Plot error for beta of an SIRS model
+
+# Arguments
+- `S, I, Is, R, c, γ, ps, γs, α`: Vector of valid parameters for any SIR/SIRS model as vector
+- `tspan`: Timespan to simulate
+- `data::Vector{}`: Data to model against (Infected)
+- `data_time::Vector{}`: Time of datapoints (Infected)
+- `data_s::Vector{}`: Data to model against (Seriously Infected)
+- `data_time_s::Vector{}`: Time of datapoints (Seriously Infected)
+- `β_range`: Range of beta values to plot
+"""
 function plot_error(S, I, Is, R, c, γ, ps, γs, α, tspan, data, data_time, data_s, data_time_s, β_range)
     step = 0.0001
     β_vals = β_range[1]:step:β_range[2]
@@ -389,6 +474,21 @@ function plot_error(S, I, Is, R, c, γ, ps, γs, α, tspan, data, data_time, dat
     plot(β_vals, error_array, xlabel="β", ylabel = "Mean Squared Error", title = "Error vs β", legend=false)
 end
 
+"""
+    get_beta_range(S, I, Is, R, c, γ, ps, γs, α, tspan, data, data_time, data_s, data_time_s, β_range, std)
+
+Approximate a range for beta based on deviations from minimum error
+
+# Arguments
+- `S, I, Is, R, c, γ, ps, γs, α`: Vector of valid parameters for any SIR/SIRS model as vector
+- `tspan`: Timespan to simulate
+- `data::Vector{}`: Data to model against (Infected)
+- `data_time::Vector{}`: Time of datapoints (Infected)
+- `data_s::Vector{}`: Data to model against (Seriously Infected)
+- `data_time_s::Vector{}`: Time of datapoints (Seriously Infected)
+- `β_range`: Range of beta values to plot
+- `std`: How many standard deviations to each side assuming 0 bias
+"""
 function get_beta_range(S, I, Is, R, c, γ, ps, γs, α, tspan, data, data_time, data_s, data_time_s, β_range, std)
     step = 0.0001
     β_vals = β_range[1]:step:β_range[2]
@@ -413,8 +513,25 @@ function get_beta_range(S, I, Is, R, c, γ, ps, γs, α, tspan, data, data_time,
     return β_spread
 end
 
+
+"""
+    get_parameter_range(params, tspan, data, data_time, data_s, data_time_s, param_range, index, std)
+
+Approximate a range for a parameter based on deviations from minimum error
+
+# Arguments
+- `params`: Vector of valid parameters for any SIR/SIRS model as vector
+- `tspan`: Timespan to simulate
+- `data::Vector{}`: Data to model against (Infected)
+- `data_time::Vector{}`: Time of datapoints (Infected)
+- `data_s::Vector{}`: Data to model against (Seriously Infected)
+- `data_time_s::Vector{}`: Time of datapoints (Seriously Infected)
+- `param_range`: Range of parameter values to plot
+- `index`: Index of parameter
+- `std`: How many standard deviations to each side assuming 0 bias
+"""
 function get_parameter_range(params, tspan, data, data_time, data_s, data_time_s, param_range, index, std)
-    step = 0.001
+    step = 0.0001
     vals = param_range[1]:step:param_range[2]
     error_array = get_error_spread(params, tspan, data, data_time, data_s, data_time_s, index, vals)
     min_error = minimum(error_array)
@@ -436,16 +553,45 @@ function get_parameter_range(params, tspan, data, data_time, data_s, data_time_s
     return param_spread
 end
 
+"""
+    optimise_parameter(params, tspan, data, data_time, data_s, data_time_s, param_range, index)
+
+Find value for parameter that gives minimum error
+
+# Arguments
+- `params`: Vector of valid parameters for any SIR/SIRS model as vector
+- `tspan`: Timespan to simulate
+- `data::Vector{}`: Data to model against (Infected)
+- `data_time::Vector{}`: Time of datapoints (Infected)
+- `data_s::Vector{}`: Data to model against (Seriously Infected)
+- `data_time_s::Vector{}`: Time of datapoints (Seriously Infected)
+- `param_range`: Range of parameter values to plot
+- `index`: Index of parameter
+"""
 function optimise_parameter(params, tspan, data, data_time, data_s, data_time_s, param_range, index)
-    step = 0.0001
+    step = 0.001
     vals = param_range[1]:step:param_range[2]
     error_array = get_error_spread(params, tspan, data, data_time, data_s, data_time_s, index, vals)
-    min_error = minimum(error_array)
     return vals[argmin(error_array)]
 end
 
+"""
+    get_parameter_range(params, tspan, data, data_time, param_range, param_index, index, std)
+
+Approximate a range for a parameter based on deviations from minimum error
+
+# Arguments
+- `params`: Vector of valid parameters for any SIR/SIRS model as vector
+- `tspan`: Timespan to simulate
+- `data::Vector{}`: Data to model against 
+- `data_time::Vector{}`: Time of datapoints 
+- `param_range`: Range of parameter values to plot
+- `param_index`: Index of parameter
+- `index`: Index SIRS model used for error
+- `std`: How many standard deviations to each side assuming 0 bias
+"""
 function get_parameter_range(params, tspan, data, data_time, param_range, param_index, index, std)
-    step = 0.001
+    step = 0.0001
     vals = param_range[1]:step:param_range[2]
     error_array = get_error_spread(params, tspan, data, data_time, param_index, index, vals)
     min_error = minimum(error_array)
@@ -464,22 +610,29 @@ function get_parameter_range(params, tspan, data, data_time, param_range, param_
             return param_spread
         end
     end
-    println("Didnt hit max")
     return param_spread
 end
 
 
-function plot_range(S, I, Is, R, c, γ, ps, γs, α, tspan, data, data_time, β_vals, index) 
-    sol1 = simulate_model(S, I, Is, R, c, β_vals[1], γ, ps, γs, α, tspan)
-    sol2 = simulate_model(S, I, Is, R, c, β_vals[2], γ, ps, γs, α, tspan)
-    sol3 = simulate_model(S, I, Is, R, c, β_vals[3], γ, ps, γs, α, tspan)
-    plot(linewidth=4, title="SIRS Solution",xaxis="Time",yaxis="Population",legend=true)
-    plot!(sol1.t,sol1[index,:], label = "Best case prediction")
-    plot!(sol2.t,sol2[index,:], label = "Mean prediction")
-    plot!(sol3.t,sol3[index,:], label = "Worse case prediction")
-    plot!(data_time, data, seriestype=:scatter, label="Data")
-end
 
+
+"""
+    plot_range(params, tspan, data, data_time, param_vals, index, param_index, labels, solution_labels)
+
+Plot an SIR/SIRS solution for multiple values of a parameter
+
+# Arguments
+- `params`: Vector of valid parameters for any SIR/SIRS model as vector
+- `tspan`: Timespan to simulate
+- `data::Vector{}`: Data to model against 
+- `data_time::Vector{}`: Time of datapoints 
+- `param_vals`: Parameter values to plot
+- `index`: Index SIRS model used for plot
+- `param_index`: Index of parameter
+- `labels`: labels for graph, [title,xaxis,yaxis,data label]
+- `solution_labels`: Labels for parameter values
+
+"""
 function plot_range(params, tspan, data, data_time, param_vals, index, param_index, labels, solution_labels)
     plot(linewidth=7, title=labels[1],xaxis=labels[2],yaxis=labels[3],legend=true, palette = :Dark2_8)
     for i in range(1,length(param_vals))
@@ -490,6 +643,17 @@ function plot_range(params, tspan, data, data_time, param_vals, index, param_ind
     end
 
     plot!(data_time, data, seriestype=:scatter, label=labels[4])
+end
+
+function plot_range(S, I, Is, R, c, γ, ps, γs, α, tspan, data, data_time, β_vals, index) 
+    sol1 = simulate_model(S, I, Is, R, c, β_vals[1], γ, ps, γs, α, tspan)
+    sol2 = simulate_model(S, I, Is, R, c, β_vals[2], γ, ps, γs, α, tspan)
+    sol3 = simulate_model(S, I, Is, R, c, β_vals[3], γ, ps, γs, α, tspan)
+    plot(linewidth=4, title="SIRS Solution",xaxis="Time",yaxis="Population",legend=true)
+    plot!(sol1.t,sol1[index,:], label = "Best case prediction")
+    plot!(sol2.t,sol2[index,:], label = "Mean prediction")
+    plot!(sol3.t,sol3[index,:], label = "Worse case prediction")
+    plot!(data_time, data, seriestype=:scatter, label="Data")
 end
 
 function plot_range(S, I, Is, R, c, γ, ps, γs, α, tspan, data, data_time, β_vals, index, labels) 
@@ -538,4 +702,22 @@ function optimise_parameters(params, tspan, data, data_time, data_s, data_time_s
         end
     end
     return params
+end
+
+function find_start_time(params, end_time, data, data_time, data_s, data_time_s, variable_params)
+    min_error = Inf
+    #find start time with minimum mean squared error
+    for i in range(1,end_time)
+        tspan = [i, end_time]
+        params = optimise_parameters(params, tspan, data, data_time, data_s, data_time_s, variable_params, 5)
+        solution = simulate_model(params, tspan)
+        error = SIR_error(solution, data, data_time, 2) + SIR_error(solution, data_s, data_time_s, 3)
+        
+        if error < min_error
+            min_error = error
+        end
+        if error > min_error
+            return i
+        end
+    end
 end

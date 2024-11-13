@@ -19,6 +19,7 @@ export get_beta_range
 export get_parameter_array
 export get_parameter_range
 export optimise_parameters
+export find_start_time
 
 include("SIR.jl")
 
