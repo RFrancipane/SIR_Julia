@@ -47,4 +47,24 @@ using Test
         end
     end
 
+    sol = simulate_model(5,1,0,0,0,[0,200.])
+    error_test_data = [0,1,2,3]
+    error_test_data_time = [1,2,3,4]
+    @test SIR_error(sol, error_test_data, error_test_data_time, 2) ≈ 6/4
+
+    @testset "Serious Infection" begin
+        S, I, Is, R = 4999, 1, 0, 0
+        c, β, γ = 10, 0.05, 0.1
+        ps, γs = 0.2, 0.1
+
+    end
+    @testset "Intervention model" begin
+        #intervention after 3 days
+        sol = simulate_model(1000,1,0,0,1,1,1,1,1,0,1,1,3,[0,30.])
+        for i in range(1,length(sol.u)-1)
+            if sol.t[i] > 3
+                @test sol.u[i][1] ≈ sol.u[i+1][1]
+            end
+        end
+    end
 end
