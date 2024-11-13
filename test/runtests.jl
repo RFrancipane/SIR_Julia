@@ -25,7 +25,7 @@ using Test
 
     @testset "Force of infection model" begin
         S, I, R = 4999, 1, 0
-        N = S + I + R
+        N = 5000
         c, β, γ = 10, 0.05, 0.1
         sol = simulate_model(S, I, R, c, β, γ, [0,200.0])
         #test constant population

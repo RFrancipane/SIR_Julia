@@ -12,6 +12,14 @@ export probability_to_rate
 export plot_solution_SIRS
 export get_R0
 export get_pc
+export SIR_error
+export plot_error
+export plot_range
+export get_beta_range
+export get_parameter_array
+export get_parameter_range
+export optimise_parameters
+export find_start_time
 
 include("SIR.jl")
 
