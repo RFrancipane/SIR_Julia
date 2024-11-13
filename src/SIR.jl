@@ -197,12 +197,12 @@ function SIR_error(sol::ODESolution, data::Vector{}, data_time::Vector{}, index)
     total = 0
     for x in range(1,length(data))
         for i in range(1,length(sol.t))
-            if sol.t[i] ≈ data_time[x]
+            if sol.t[i] == data_time[x]
                 total += (sol.u[i][index]-data[x])^2
             end
         end
     end
-    total /= (length(data)-2)
+    total /= (length(data))
     return total
 end
 
@@ -375,11 +375,11 @@ function get_error_spread(S, I, Is, R, c, γ, ps, γs, α, tspan, data, data_tim
     return error_array
 end
 
-function plot_error(params, tspan, data, data_time, data_index, param_index, param_range)
+function plot_error(params, tspan, data, data_time, data_index, param_index, param_range, labels)
     step = 0.0001
     vals = param_range[1]:step:param_range[2]
     error_array = get_error_spread(params, tspan, data, data_time, data_index, param_index, vals)
-    plot(vals, error_array, xlabel="Param", ylabel = "Mean Squared Error", title = "Error vs Param", legend=false)
+    plot(vals, error_array, xlabel=labels[1], ylabel = "Mean Squared Error", title = labels[2], legend=false)
 end
 
 function plot_error(S, I, Is, R, c, γ, ps, γs, α, tspan, data, data_time, data_s, data_time_s, β_range)
@@ -395,7 +395,7 @@ function get_beta_range(S, I, Is, R, c, γ, ps, γs, α, tspan, data, data_time,
     error_array = get_error_spread(S, I, Is, R, c, γ, ps, γs, α, tspan, data, data_time, data_s, data_time_s, β_vals)
     min_error = minimum(error_array)
     #Approx Standard deviation of MSE is sqrt(MSE)
-    error_diff = std*sqrt(min_error)
+    error_diff = std*min_error
     β_spread = [0,β_vals[argmin(error_array)],0]
 
 
@@ -414,12 +414,12 @@ function get_beta_range(S, I, Is, R, c, γ, ps, γs, α, tspan, data, data_time,
 end
 
 function get_parameter_range(params, tspan, data, data_time, data_s, data_time_s, param_range, index, std)
-    step = 0.0001
+    step = 0.001
     vals = param_range[1]:step:param_range[2]
     error_array = get_error_spread(params, tspan, data, data_time, data_s, data_time_s, index, vals)
     min_error = minimum(error_array)
     #Approx Standard deviation of MSE is sqrt(MSE)
-    error_diff = std*sqrt(min_error)
+    error_diff = std*min_error
     param_spread = [0,vals[argmin(error_array)],0]
 
 
@@ -433,7 +433,6 @@ function get_parameter_range(params, tspan, data, data_time, data_s, data_time_s
             return param_spread
         end
     end
-    
     return param_spread
 end
 
@@ -446,12 +445,12 @@ function optimise_parameter(params, tspan, data, data_time, data_s, data_time_s,
 end
 
 function get_parameter_range(params, tspan, data, data_time, param_range, param_index, index, std)
-    step = 0.0001
+    step = 0.001
     vals = param_range[1]:step:param_range[2]
     error_array = get_error_spread(params, tspan, data, data_time, param_index, index, vals)
     min_error = minimum(error_array)
     #Approx Standard deviation of MSE is sqrt(MSE)
-    error_diff = std*sqrt(min_error)
+    error_diff = std*min_error
     param_spread = [0,vals[argmin(error_array)],0]
 
 
@@ -465,7 +464,7 @@ function get_parameter_range(params, tspan, data, data_time, param_range, param_
             return param_spread
         end
     end
-    
+    println("Didnt hit max")
     return param_spread
 end
 
@@ -479,6 +478,18 @@ function plot_range(S, I, Is, R, c, γ, ps, γs, α, tspan, data, data_time, β_
     plot!(sol2.t,sol2[index,:], label = "Mean prediction")
     plot!(sol3.t,sol3[index,:], label = "Worse case prediction")
     plot!(data_time, data, seriestype=:scatter, label="Data")
+end
+
+function plot_range(params, tspan, data, data_time, param_vals, index, param_index, labels, solution_labels)
+    plot(linewidth=7, title=labels[1],xaxis=labels[2],yaxis=labels[3],legend=true, palette = :Dark2_8)
+    for i in range(1,length(param_vals))
+        params[param_index] = param_vals[i]
+        sol = simulate_model(params, tspan)
+        plot!(sol.t,sol[index,:], label = solution_labels[i])
+
+    end
+
+    plot!(data_time, data, seriestype=:scatter, label=labels[4])
 end
 
 function plot_range(S, I, Is, R, c, γ, ps, γs, α, tspan, data, data_time, β_vals, index, labels) 
