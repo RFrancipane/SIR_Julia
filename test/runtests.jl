@@ -25,6 +25,7 @@ using Test
 
     @testset "Force of infection model" begin
         S, I, R = 4999, 1, 0
+        N = 5000
         c, β, γ = 10, 0.05, 0.1
         sol = simulate_model(S, I, R, c, β, γ, [0,200.0])
         #test constant population
@@ -58,6 +59,12 @@ using Test
 
     end
     @testset "Intervention model" begin
-        
+        #intervention after 3 days
+        sol = simulate_model(1000,1,0,0,1,1,1,1,1,0,1,1,3,[0,30.])
+        for i in range(1,length(sol.u)-1)
+            if sol.t[i] > 3
+                @test sol.u[i][1] ≈ sol.u[i+1][1]
+            end
+        end
     end
 end
