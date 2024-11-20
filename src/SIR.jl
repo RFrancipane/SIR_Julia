@@ -366,7 +366,7 @@ Calculate mean squared error of an SIR/SIRS model at any number of values for on
 - `index`: Parameter index to change
 - `vals::Vector{}`: Values of parameter to test
 """
-function get_error_spread(params::Vector{}, tspan::Vector{}, data::Vector{}, data_time::Vector{}, data_index, index, vals::Vector{})
+function get_error_spread(params::Vector{}, tspan::Vector{}, data::Vector{}, data_time::Vector{}, data_index, index, vals)
     error_array = []
     for param_val in vals
         params[index] = param_val
@@ -394,7 +394,7 @@ Calculate mean squared error of an SIR/SIRS model at any number of values for on
 - `index`: Parameter index to change
 - `vals::Vector{}`: Values of parameter to test
 """
-function get_error_spread(params::Vector{}, tspan::Vector{}, data::Vector{}, data_time::Vector{}, data_s::Vector{}, data_time_s::Vector{}, index, vals::Vector{})
+function get_error_spread(params::Vector{}, tspan::Vector{}, data::Vector{}, data_time::Vector{}, data_s::Vector{}, data_time_s::Vector{}, index, vals)
     
     error_array = []
     for param_val in vals
@@ -645,6 +645,32 @@ function plot_range(params, tspan, data, data_time, param_vals, index, param_ind
     plot!(data_time, data, seriestype=:scatter, label=labels[4])
 end
 
+function start_plot(labels, tspan)
+    plot(linewidth=7, title=labels[1],xaxis=labels[2],yaxis=labels[3],legend=true, palette = :Dark2_8)
+    xlims!(tspan[1],tspan[2])
+end
+
+function plot_solution!(solution, index, solution_label)
+    plot!(solution.t, solution[index,:], label = solution_label)
+end
+
+function plot_data!(data, data_time, data_label)
+    plot!(data_time, data, seriestype=:scatter, label=data_label)
+end
+"""
+    plot_range(S, I, Is, R, c, γ, ps, γs, α, tspan, data, data_time, β_vals, index)
+
+Plot an SIRS solution for multiple values of β against data
+
+# Arguments
+- `S, I, Is, R, c, γ, ps, γs, α`: SIRS parameters
+- `tspan`: Timespan to simulate
+- `data::Vector{}`: Data to model against 
+- `data_time::Vector{}`: Time of datapoints 
+- `β_vals`: β values to plot
+- `index`: Index SIRS model used for plot
+
+"""
 function plot_range(S, I, Is, R, c, γ, ps, γs, α, tspan, data, data_time, β_vals, index) 
     sol1 = simulate_model(S, I, Is, R, c, β_vals[1], γ, ps, γs, α, tspan)
     sol2 = simulate_model(S, I, Is, R, c, β_vals[2], γ, ps, γs, α, tspan)
@@ -655,7 +681,20 @@ function plot_range(S, I, Is, R, c, γ, ps, γs, α, tspan, data, data_time, β_
     plot!(sol3.t,sol3[index,:], label = "Worse case prediction")
     plot!(data_time, data, seriestype=:scatter, label="Data")
 end
+"""
+    plot_range(S, I, Is, R, c, γ, ps, γs, α, tspan, data, data_time, β_vals, index)
 
+Plot an SIRS solution for multiple values of β against data
+
+# Arguments
+- `S, I, Is, R, c, γ, ps, γs, α`: SIRS parameters
+- `tspan`: Timespan to simulate
+- `data::Vector{}`: Data to model against 
+- `data_time::Vector{}`: Time of datapoints 
+- `β_vals`: β values to plot
+- `index`: Index SIRS model used for plot
+- `labels`: labels for graph, [title,xaxis,yaxis,data label]
+"""
 function plot_range(S, I, Is, R, c, γ, ps, γs, α, tspan, data, data_time, β_vals, index, labels) 
     sol1 = simulate_model(S, I, Is, R, c, β_vals[1], γ, ps, γs, α, tspan)
     sol2 = simulate_model(S, I, Is, R, c, β_vals[2], γ, ps, γs, α, tspan)
@@ -666,7 +705,18 @@ function plot_range(S, I, Is, R, c, γ, ps, γs, α, tspan, data, data_time, β_
     plot!(sol3.t,sol3[index,:], label = "Worse case prediction")
     plot!(data_time, data, seriestype=:scatter, label=labels[4])
 end
+"""
+    plot_range(S, I, Is, R, c, γ, ps, γs, α, tspan, data, data_time, β_vals, index)
 
+Plot an SIRS solution for multiple values of β
+
+# Arguments
+- `S, I, Is, R, c, γ, ps, γs, α`: SIRS parameters
+- `tspan`: Timespan to simulate
+- `β_vals`: β values to plot
+- `index`: Index SIRS model used for plot
+- `labels`: labels for graph, [title,xaxis,yaxis,data label]
+"""
 function plot_range(S, I, Is, R, c, γ, ps, γs, α, tspan, β_vals, index) 
     sol1 = simulate_model(S, I, Is, R, c, β_vals[1], γ, ps, γs, α, tspan)
     sol2 = simulate_model(S, I, Is, R, c, β_vals[2], γ, ps, γs, α, tspan)
@@ -677,6 +727,11 @@ function plot_range(S, I, Is, R, c, γ, ps, γs, α, tspan, β_vals, index)
     plot!(sol3.t,sol3[index,:])
 end
 
+"""
+    get_parameter_array()
+
+Converts SIR/SIRS arguments to array
+"""
 function get_parameter_array(S, I, R, λ, γ) 
     return [S, I, R, λ, γ]
 end
@@ -693,6 +748,21 @@ function get_parameter_array(S, I, Is, R, c, β, γ, ps, γs, α, ϵ, Φ, interv
     return [S, I, Is, R, c, β, γ, ps, γs, α, ϵ, Φ, intervention_time]
 end
 
+"""
+    optimise_parameters(params, tspan, data, data_time, data_s, data_time_s, variable_params, num_iterations)
+
+Optimise parameters for an SIR/SIRS model against data by cycling through num_iterations times and finding values which
+minimise MSE. Often gets stuck at local minimum.
+
+# Arguments
+- `params`: Vector of valid parameters for any SIR/SIRS model as vector
+- `tspan`: Timespan to simulate
+- `data::Vector{}`: Data to model against 
+- `data_time::Vector{}`: Time of datapoints 
+- `variable_params`: Parameters to be optimised
+- `num_iterations`: Number of times to cycle through parameters
+
+"""
 function optimise_parameters(params, tspan, data, data_time, data_s, data_time_s, variable_params, num_iterations)
     param_range = [0,1]
     for i in range(1, num_iterations)
@@ -704,6 +774,22 @@ function optimise_parameters(params, tspan, data, data_time, data_s, data_time_s
     return params
 end
 
+
+"""
+    find_start_time(params, end_time, data, data_time, data_s, data_time_s, variable_params)
+
+Find start time of SIR/SIRS infection that minimises error
+
+# Arguments
+- `params`: Vector of valid parameters for any SIR/SIRS model as vector
+- `end_time`: End of timespan to model against
+- `data::Vector{}`: Data to model against 
+- `data_time::Vector{}`: Time of datapoints 
+- `data_s::Vector{}`: Data to model against (Serious)
+- `data_time_s::Vector{}`: Time of datapoints (Serious)
+- `variable_params`: Parameters that are unknown
+
+"""
 function find_start_time(params, end_time, data, data_time, data_s, data_time_s, variable_params)
     min_error = Inf
     #find start time with minimum mean squared error
@@ -720,4 +806,35 @@ function find_start_time(params, end_time, data, data_time, data_s, data_time_s,
             return i
         end
     end
+end
+
+
+"""
+    get_maximum(solution, index)
+
+Get maximum value of SIRS at a given index
+
+# Arguments
+- `solution`: Model solution
+- `index`: Index of model to find maximum of
+
+"""
+function get_maximum(solution, index)
+    return maximum(solution[index,:])
+end
+
+
+"""
+    get_peak_time(solution, index)
+
+Get time of peak infected for an SIRS solution
+
+# Arguments
+- `solution`: Model solution
+- `index`: Index of model to find time of peak
+
+"""
+function get_peak_time(solution, index)
+    max_index =  argmax(solution[index,:])
+    return solution.t[max_index]
 end
