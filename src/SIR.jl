@@ -645,6 +645,18 @@ function plot_range(params, tspan, data, data_time, param_vals, index, param_ind
     plot!(data_time, data, seriestype=:scatter, label=labels[4])
 end
 
+function start_plot(labels, tspan)
+    plot(linewidth=7, title=labels[1],xaxis=labels[2],yaxis=labels[3],legend=true, palette = :Dark2_8)
+    xlims!(tspan[1],tspan[2])
+end
+
+function plot_solution!(solution, index, solution_label)
+    plot!(solution.t, solution[index,:], label = solution_label)
+end
+
+function plot_data!(data, data_time, data_label)
+    plot!(data_time, data, seriestype=:scatter, label=data_label)
+end
 """
     plot_range(S, I, Is, R, c, γ, ps, γs, α, tspan, data, data_time, β_vals, index)
 
@@ -794,4 +806,35 @@ function find_start_time(params, end_time, data, data_time, data_s, data_time_s,
             return i
         end
     end
+end
+
+
+"""
+    get_maximum(solution, index)
+
+Get maximum value of SIRS at a given index
+
+# Arguments
+- `solution`: Model solution
+- `index`: Index of model to find maximum of
+
+"""
+function get_maximum(solution, index)
+    return maximum(solution[index,:])
+end
+
+
+"""
+    get_peak_time(solution, index)
+
+Get time of peak infected for an SIRS solution
+
+# Arguments
+- `solution`: Model solution
+- `index`: Index of model to find time of peak
+
+"""
+function get_peak_time(solution, index)
+    max_index =  argmax(solution[index,:])
+    return solution.t[max_index]
 end

@@ -20,6 +20,11 @@ export get_parameter_array
 export get_parameter_range
 export optimise_parameters
 export find_start_time
+export start_plot
+export plot_solution!
+export plot_data!
+export get_maximum
+export get_peak_time
 
 include("SIR.jl")
 
